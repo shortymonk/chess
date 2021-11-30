@@ -6,12 +6,12 @@ fun main() {
     val regex = Regex("[a-h][1-8][a-h][1-8]")
     Player.Board.refresh()
     while (true) {
+        if (Player.gameIsOver) {
+            println("Bye!")
+            break }
         println("${if (Player.isWhite) white.name else black.name}'s turn:")
         input = readLine()!!
-        when {
-            input.matches(regex) -> Player.Pawns.move(input)
-            input == "exit" -> {println("Bye!"); break}
-            else -> println("Invalid Input")
-        }
+        if (input == "exit") { println("Bye!"); break }
+        if (input.matches(regex)) Player.Pawns.move(input) else println("Invalid Input")
     }
 }

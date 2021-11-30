@@ -3,9 +3,17 @@ class Player(val color: String = "white", val name: String) {
     companion object {
         val whitePawns = mutableSetOf<Pair<Int, Int>>()
         val blackPawns = mutableSetOf<Pair<Int, Int>>()
-        init { for (i in 1..8) { whitePawns += Pair(i, 2); blackPawns += Pair(i, 7) } }
+        val whiteSteps = mutableSetOf<Pair<Int, Int>>()
+        val blackSteps = mutableSetOf<Pair<Int, Int>>()
+        init {
+            for (i in 1..8) {
+                whitePawns += Pair(i, 2); blackPawns += Pair(i, 7)
+                whiteSteps += Pair(i, 3); blackSteps += Pair(i, 6)
+            }
+        }
         var isWhite: Boolean = true
         var chance: Pair<Int, Int> = Pair(0, 0)
+        var gameIsOver = false
 
         fun newPlayer(): Player {
             val color = if (isWhite) Players.COLOR.white else Players.COLOR.black
@@ -48,12 +56,14 @@ class Player(val color: String = "white", val name: String) {
     object Pawns {
         fun move(input: String) {
             val player = Players.COLOR
+            val startPosition = if (isWhite) 2 else 7
             val pawnSet = if (isWhite) whitePawns else blackPawns
             val opponentSet = if (isWhite) blackPawns else whitePawns
+            val opponentPossibleSteps = if (!isWhite) whiteSteps else blackSteps
             val take = Pair(convert(input[0]), input[1].toString().toInt())
             val put = Pair(convert(input[2]), input[3].toString().toInt())
             val makeStep = {
-                pawnSet.remove(take); pawnSet += put
+                pawnSet.remove(take); pawnSet += put; opponentPossibleSteps.remove(put)
                 Board.refresh(); isWhite = !isWhite
             }
             val pawnIsExist = pawnSet.contains(take)
@@ -69,7 +79,10 @@ class Player(val color: String = "white", val name: String) {
                 !pawnIsExist -> player.noPawn(isWhite, input)
 
                 checkStep && isFreeAhead && take.first == put.first -> {
-                    chance = if ((put.second - take.second) * direction == 2) put else Pair(0, 0)
+                    if ((put.second - take.second) * direction == 2) {
+                        chance = put
+                        opponentPossibleSteps.add(chance)
+                    } else chance = Pair(0, 0)
                     makeStep.invoke()
                 }
 
@@ -84,9 +97,28 @@ class Player(val color: String = "white", val name: String) {
                 else -> println("Invalid Input")
             }
 
-//            println("direction: $direction; first step: $firstStep; checkStep: $checkStep; free ahead: $isFreeAhead; capture: $isCapture \n" +
-//                    "Player ${player.color}: $whitePawns \n" +
-//                    "Player ${player.color}: $blackPawns")
+            opponentPossibleSteps.clear()
+            for (pawn in opponentSet){
+                val possibleStep = listOf(Pair(pawn.first,pawn.second - 1 * direction),
+                    Pair(pawn.first - 1, pawn.second - 1 * direction),
+                    Pair(pawn.first + 1, pawn.second - 1 * direction)
+                )
+                if (possibleStep[0] !in pawnSet) opponentPossibleSteps.add(possibleStep[0])
+                if (possibleStep[1] in pawnSet) opponentPossibleSteps.add(possibleStep[1])
+                if (possibleStep[2] in pawnSet) opponentPossibleSteps.add(possibleStep[2])
+            }
+
+            when {
+                opponentSet.isEmpty() -> { player.playerWins(isWhite); gameIsOver = true }
+                opponentPossibleSteps.isEmpty() -> { println("Stalemate!"); gameIsOver = true }
+                else -> {
+                    for (pawn in pawnSet) {
+                        if (pawn.second == startPosition + 6 * direction) {
+                            player.playerWins(isWhite); gameIsOver = true; break
+                        }
+                    }
+                }
+            }
         }
     }
 }
