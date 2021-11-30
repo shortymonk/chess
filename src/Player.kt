@@ -8,8 +8,8 @@ class Player(val color: String = "white", val name: String) {
         var chance: Pair<Int, Int> = Pair(0, 0)
 
         fun newPlayer(): Player {
-            val color = if (isWhite) "white" else "black"
-            println("${if (isWhite) "First" else "Second"} Player's name:")
+            val color = if (isWhite) Players.COLOR.white else Players.COLOR.black
+            println("${if (isWhite) Players.PLAYER.white else Players.PLAYER.black} Player's name:")
             val name = readLine()!!
             isWhite = !isWhite
             return Player(color, name)
@@ -23,16 +23,38 @@ class Player(val color: String = "white", val name: String) {
         }
     }
 
-    object Pawns {
+    object Board {
+        fun refresh() {
+            val border = "  +---+---+---+---+---+---+---+---+"
+            val file = " abcdefgh\n"
+            val board = Array(10) { Array(10) { "   |" } }
+            for (rank in board) {
+                board[board.indexOf(rank)][0] = "${board.indexOf(rank)} |"
+                board[0][board.indexOf(rank)] = " ${file[board.indexOf(rank)]}  "
+                board[board.indexOf(rank)][board.lastIndex] = ""
+                board[board.lastIndex][board.indexOf(rank)] = ""
+            }
+            board[0][0] = "   "
+            whitePawns.forEach { board[it.second][it.first] = Players.PAWN.white }
+            blackPawns.forEach { board[it.second][it.first] = Players.PAWN.black }
+            var output = "$border\n"
+            for (i in 1..9) output += if (i != board.lastIndex) {
+                "${board.reversed()[i].joinToString("")}\n${border}\n"
+            } else "${board.reversed()[i].joinToString("")}\n"
+            println(output)
+        }
+    }
 
-        fun move(player: Player,input: String, chess: Board) {
+    object Pawns {
+        fun move(input: String) {
+            val player = Players.COLOR
             val pawnSet = if (isWhite) whitePawns else blackPawns
             val opponentSet = if (isWhite) blackPawns else whitePawns
             val take = Pair(convert(input[0]), input[1].toString().toInt())
             val put = Pair(convert(input[2]), input[3].toString().toInt())
             val makeStep = {
                 pawnSet.remove(take); pawnSet += put
-                chess.refreshBoard(); isWhite = !isWhite
+                Board.refresh(); isWhite = !isWhite
             }
             val pawnIsExist = pawnSet.contains(take)
             val direction = if (isWhite) 1 else -1
@@ -44,12 +66,10 @@ class Player(val color: String = "white", val name: String) {
             val enPassant = chance == Pair(put.first, put.second - 1 * direction) && opponentSet.contains(chance)
 
             when {
-                !pawnIsExist -> { println("No ${player.color} pawn at ${input.substring(0, 2)}") }
+                !pawnIsExist -> player.noPawn(isWhite, input)
 
                 checkStep && isFreeAhead && take.first == put.first -> {
-                    if ((put.second - take.second) * direction == 2) chance = put else {
-                        chance = Pair(0, 0)
-                    }
+                    chance = if ((put.second - take.second) * direction == 2) put else Pair(0, 0)
                     makeStep.invoke()
                 }
 
@@ -63,6 +83,7 @@ class Player(val color: String = "white", val name: String) {
 
                 else -> println("Invalid Input")
             }
+
 //            println("direction: $direction; first step: $firstStep; checkStep: $checkStep; free ahead: $isFreeAhead; capture: $isCapture \n" +
 //                    "Player ${player.color}: $whitePawns \n" +
 //                    "Player ${player.color}: $blackPawns")
